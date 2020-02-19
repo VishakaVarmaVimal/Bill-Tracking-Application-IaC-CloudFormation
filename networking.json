@@ -1,0 +1,135 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description" : "AWS CloudFormation - Spring 2020",
+    "Parameters" : {
+        "VPCCIDR" : { "Type": "String"},
+        "MyVPCName" : { "Type": "String"},
+        "AZ1" : { "Type": "AWS::EC2::AvailabilityZone::Name"},
+        "AZ2" : { "Type": "AWS::EC2::AvailabilityZone::Name"},
+        "AZ3" : { "Type": "AWS::EC2::AvailabilityZone::Name"},
+        "Subnet1CIDR" : { "Type": "String"},
+        "Subnet2CIDR" : { "Type": "String"},
+        "Subnet3CIDR" : { "Type": "String"}        
+    },
+    "Resources" : {
+        "myVPC" : {
+            "Type" : "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock" : { "Ref" : "VPCCIDR"},
+                "EnableDnsSupport" : true,
+                "EnableDnsHostnames" : true,
+                "InstanceTenancy" : "default",
+                "Tags" : [
+                    {
+                        "Key" : "Name",
+                        "Value" : { "Ref" : "MyVPCName"}
+                    }
+                ]
+            }
+        },
+        "mySubnet1" : {
+            "Type" : "AWS::EC2::Subnet",
+            "Properties" : {
+                "AvailabilityZone" : { "Ref" : "AZ1"},
+                "CidrBlock" : { "Ref" : "Subnet1CIDR"},
+                "MapPublicIpOnLaunch": true,
+                "VpcId" : { "Ref" : "myVPC"},
+                "Tags" : [
+                    {
+                        "Key" : "Name",
+                        "Value" : {"Fn::Join":["_",[{"Ref" : "MyVPCName"},"Subnet1"]]}
+                    }
+                ]
+            }
+        },
+        "mySubnet2" : {
+            "Type" : "AWS::EC2::Subnet",
+            "Properties" : {
+                "AvailabilityZone" : { "Ref" : "AZ2"},
+                "CidrBlock" : { "Ref" : "Subnet2CIDR"},
+                "MapPublicIpOnLaunch": true,
+                "VpcId" : { "Ref" : "myVPC"},
+                "Tags" : [
+                    {
+                        "Key" : "Name",
+                        "Value" : {"Fn::Join":["_",[{"Ref" : "MyVPCName"},"Subnet2"]]}
+                    }
+                ]
+            }
+        },
+        "mySubnet3" : {
+            "Type" : "AWS::EC2::Subnet",
+            "Properties" : {
+                "AvailabilityZone" : { "Ref" : "AZ3"},
+                "CidrBlock" : { "Ref" : "Subnet3CIDR"},
+                "MapPublicIpOnLaunch": true,
+                "VpcId" : { "Ref" : "myVPC"},
+                "Tags" : [
+                    {
+                        "Key" : "Name",
+                        "Value" : {"Fn::Join":["_",[{"Ref" : "MyVPCName"},"Subnet3"]]}
+                    }
+                ]
+            }
+        },
+        "myInternetGateway" : {
+            "Type" : "AWS::EC2::InternetGateway",
+            "Properties" : {
+                "Tags" : [
+                    {
+                        "Key" : "Name",
+                        "Value" : {"Fn::Join":["_",[{"Ref" : "MyVPCName"},"InternetGateway"]]}
+                    }
+                ]
+            }
+        },
+        "attachMyInternetGateway" : {
+            "Type" : "AWS::EC2::VPCGatewayAttachment",
+            "Properties" : {
+                "InternetGatewayId" : { "Ref" : "myInternetGateway"},
+                "VpcId" : { "Ref" : "myVPC"}
+            }
+        },
+        "myPublicRouteTable" : {
+            "Type" : "AWS::EC2::RouteTable",
+            "Properties" : {
+                "VpcId" : { "Ref" : "myVPC"},
+                "Tags" : [
+                    {
+                        "Key" : "Name",
+                        "Value" : {"Fn::Join":["_",[{"Ref" : "MyVPCName"},"PublicRouteTable"]]}
+                    }
+                ]
+            }
+        },
+        "mySubnet1RouteTableAssociation" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "RouteTableId" : { "Ref" : "myPublicRouteTable"},
+                "SubnetId" : {"Ref" : "mySubnet1"}
+            }
+        },
+        "mySubnet2RouteTableAssociation" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "RouteTableId" : { "Ref" : "myPublicRouteTable"},
+                "SubnetId" : {"Ref" : "mySubnet2"}
+            }
+        },
+        "mySubnet3RouteTableAssociation" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "RouteTableId" : { "Ref" : "myPublicRouteTable"},
+                "SubnetId" : {"Ref" : "mySubnet3"}                            
+            }
+        },
+        "myPublicRoute" : {
+            "Type" : "AWS::EC2::Route",
+            "Properties" : {
+                "DestinationCidrBlock" : "0.0.0.0/0",
+                "GatewayId" : { "Ref" : "myInternetGateway"},
+                "RouteTableId" : { "Ref" : "myPublicRouteTable"}
+            }
+        }
+    }
+}
