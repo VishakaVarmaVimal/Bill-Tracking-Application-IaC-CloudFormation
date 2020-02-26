@@ -10,7 +10,8 @@
         "Subnet1CIDR" : { "Type": "String"},
         "Subnet2CIDR" : { "Type": "String"},
         "Subnet3CIDR" : { "Type": "String"},
-        "AMIID" : { "Type": "String"}   
+        "AMIID" : { "Type": "String"},
+        "KeyName" : { "Type": "String"}
     },
     "Resources" : {
         "myVPC" : {
@@ -171,8 +172,7 @@
                         {
                             "Action": [
                                 "s3:DeleteObject",
-                                "s3:GetObject",
-                                "s3:ListMultipartUploadParts",
+                                "s3:ListBucket",
                                 "s3:PutObject"
                             ],
                             "Effect": "Allow",
@@ -321,6 +321,7 @@
                 "ImageId" : {"Ref" : "AMIID"},
                 "InstanceType" : "t2.micro",
                 "DisableApiTermination" : "false",
+                "KeyName" : {"Ref" : "KeyName"},
                 "BlockDeviceMappings" : [
                     {
                         "DeviceName" : "/dev/sda1",
@@ -346,10 +347,13 @@
                     "echo export DB_PORT=\"", { "Fn::GetAtt" : [ "RDSInstance", "Endpoint.Port" ] }, "\"", " >> /etc/profile", "\n",
                     "echo export DB_USER=\"dbuser\" >> /etc/profile", "\n",
                     "echo export DB_PASSWORD=\"csye6225spring2020\" >> /etc/profile", "\n",
-                    "echo export S3_BUCKET=\"", { "Ref": "S3Bucket" }, "\"", " >> /etc/profile", "\n"
+                    "echo export S3_BUCKET=\"", { "Ref": "S3Bucket" }, "\"", " >> /etc/profile", "\n",
+                    "sudo apt-get update", "\n",
+                    "sudo apt-get install mysql-client", "\n"
                 ]]}}
             },
             "DependsOn" : "RDSInstance"	
         }
     }
 }
+
