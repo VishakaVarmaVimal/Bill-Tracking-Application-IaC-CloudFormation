@@ -11,7 +11,16 @@
         "Subnet2CIDR" : { "Type": "String"},
         "Subnet3CIDR" : { "Type": "String"},
         "AMIID" : { "Type": "String"},
-        "KeyName" : { "Type": "String"}
+        "RDSInstanceClass" : { "Type": "String"},
+        "RDSAllocatedStorage" : { "Type": "String"},
+        "KeyName" : { "Type": "String"},
+        "RDSMasterUser" : { "Type": "String"},
+        "RDSMasterPass" : { "Type": "String"},
+        "RDSPubliclyAccessible" : { "Type": "String"},
+        "RDSInstanceId" : { "Type": "String"},
+        "ECInstanceType" : { "Type": "String"},
+        "RDSDBName" : { "Type": "String"},
+        "ECIVolumeSize" : { "Type": "String"}
     },
     "Resources" : {
         "myVPC" : {
@@ -288,17 +297,17 @@
             "Type" : "AWS::RDS::DBInstance",
             "Properties" : {
                 "Engine" : "MySQL",
-                "DBInstanceClass" : "db.t3.micro",
+                "DBInstanceClass" : {"Ref" : "RDSInstanceClass"},
                 "MultiAZ" : "false",
-                "DBInstanceIdentifier" : "csye6225-spring2020",
-                "MasterUsername" : "dbuser",
-                "MasterUserPassword" : "csye6225spring2020",
-                "PubliclyAccessible" : "false",
-                "DBName" : "csye6225",
+                "DBInstanceIdentifier" : {"Ref" : "RDSInstanceId"},
+                "MasterUsername" : {"Ref" : "RDSMasterUser"},
+                "MasterUserPassword" : {"Ref" : "RDSMasterPass"},
+                "PubliclyAccessible" : {"Ref" : "RDSPubliclyAccessible"},
+                "DBName" : {"Ref" : "RDSDBName"},
                 "Port" : "3306",
                 "VPCSecurityGroups" : [{"Ref" : "EC2DatabaseSecurityGroup"}],
                 "EngineVersion" : "5.7.28",
-                "AllocatedStorage" : "20",
+                "AllocatedStorage" : {"Ref" : "RDSAllocatedStorage"},
                 "StorageType" : "gp2",
                 "DBSubnetGroupName" : {"Ref" : "RDSSubnetGroup"},
                 "Tags" : [
@@ -319,7 +328,7 @@
             "Type" : "AWS::EC2::Instance",
             "Properties" : {
                 "ImageId" : {"Ref" : "AMIID"},
-                "InstanceType" : "t2.micro",
+                "InstanceType" : {"Ref" : "ECInstanceType"},
                 "DisableApiTermination" : "false",
                 "KeyName" : {"Ref" : "KeyName"},
                 "BlockDeviceMappings" : [
@@ -327,7 +336,7 @@
                         "DeviceName" : "/dev/sda1",
                         "Ebs" : {
                             "DeleteOnTermination" : "true",
-                            "VolumeSize" : 20,
+                            "VolumeSize" : {"Ref" : "ECIVolumeSize"},
                             "VolumeType" : "gp2"
                         }
                     }
@@ -345,11 +354,9 @@
                     "#!/bin/bash\n",
                     "echo export DB_HOST=\"", { "Fn::GetAtt" : [ "RDSInstance", "Endpoint.Address" ] }, "\"", " >> /etc/profile", "\n",
                     "echo export DB_PORT=\"", { "Fn::GetAtt" : [ "RDSInstance", "Endpoint.Port" ] }, "\"", " >> /etc/profile", "\n",
-                    "echo export DB_USER=\"dbuser\" >> /etc/profile", "\n",
-                    "echo export DB_PASSWORD=\"csye6225spring2020\" >> /etc/profile", "\n",
-                    "echo export S3_BUCKET=\"", { "Ref": "S3Bucket" }, "\"", " >> /etc/profile", "\n",
-                    "sudo apt-get update", "\n",
-                    "sudo apt-get install mysql-client", "\n"
+                    "echo export DB_USER=\"", { "Ref" : "RDSMasterUser"}, "\"", " >> /etc/profile", "\n",
+                    "echo export DB_PASSWORD=\"", { "Ref" : "RDSMasterPass"}, "\"", " >> /etc/profile", "\n",
+                    "echo export S3_BUCKET=\"", { "Ref": "S3Bucket" }, "\"", " >> /etc/profile", "\n"
                 ]]}}
             },
             "DependsOn" : "RDSInstance"	
