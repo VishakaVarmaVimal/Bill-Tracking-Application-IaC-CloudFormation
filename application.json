@@ -20,7 +20,8 @@
         "RDSInstanceId" : { "Type": "String"},
         "ECInstanceType" : { "Type": "String"},
         "RDSDBName" : { "Type": "String"},
-        "ECIVolumeSize" : { "Type": "String"}
+        "ECIVolumeSize" : { "Type": "String"},
+        "CodeDeployS3Bucket" : { "Type": "String"}
     },
     "Resources" : {
         "myVPC" : {
@@ -146,6 +147,12 @@
             "Type" : "AWS::S3::Bucket",
             "Properties" : {
                 "AccessControl": "Private",
+                "PublicAccessBlockConfiguration" : {
+                    "BlockPublicAcls" : true,
+                    "BlockPublicPolicy" : true,
+                    "IgnorePublicAcls" : true,
+                    "RestrictPublicBuckets" : true
+                },
                 "BucketEncryption" : {
                     "ServerSideEncryptionConfiguration": [{
                         "ServerSideEncryptionByDefault": {
@@ -165,29 +172,6 @@
                                   "StorageClass": "STANDARD_IA"
                                 }
                             ]
-                        }
-                    ]
-                }
-            }
-        },
-        "CodeDeployS3Bucket" : {
-            "Type" : "AWS::S3::Bucket",
-            "Properties" : {
-                "BucketName" : "codedeploy.vishakavarma.com",
-                "AccessControl": "Private",
-                "BucketEncryption" : {
-                    "ServerSideEncryptionConfiguration": [{
-                        "ServerSideEncryptionByDefault": {
-                        "SSEAlgorithm": "AES256"
-                        }
-                    }]
-                },
-                "LifecycleConfiguration" : {
-                    "Rules" : [
-                        {
-                            "Id": "DeleteObjectsAfter30Days",
-                            "Status": "Enabled",
-                            "ExpirationInDays": "30"
                         }
                     ]
                 }
@@ -228,8 +212,7 @@
                 "Roles" : [{"Ref" : "CodeDeployEC2ServiceRole"}]
             },
             "DependsOn" : [
-                "S3Bucket",
-                "CodeDeployS3Bucket"
+                "S3Bucket"
             ]
         },
         "CircleCIUploadToS3" : {
