@@ -388,22 +388,38 @@
                     "IpProtocol" : "tcp",
                     "FromPort" : 22,
                     "ToPort" : 22,
-                    "CidrIp" : "0.0.0.0/0"
+                    "SourceSecurityGroupId" : {
+                        "Fn::GetAtt": [
+                        "LoadBalancerSecurityGroup",
+                        "GroupId"
+                    ]}
                 },{
                     "IpProtocol" : "tcp",
                     "FromPort" : 80,
                     "ToPort" : 80,
-                    "CidrIp" : "0.0.0.0/0"
+                    "SourceSecurityGroupId" : {
+                        "Fn::GetAtt": [
+                        "LoadBalancerSecurityGroup",
+                        "GroupId"
+                    ]}
                 },{
                     "IpProtocol" : "tcp",
                     "FromPort" : 443,
                     "ToPort" : 443,
-                    "CidrIp" : "0.0.0.0/0" 
+                    "SourceSecurityGroupId" : {
+                        "Fn::GetAtt": [
+                        "LoadBalancerSecurityGroup",
+                        "GroupId"
+                    ]}
                 },{
                     "IpProtocol" : "tcp",
                     "FromPort" : 3000,
                     "ToPort" : 3000,
-                    "CidrIp" : "0.0.0.0/0" 
+                    "SourceSecurityGroupId" : {
+                        "Fn::GetAtt": [
+                        "LoadBalancerSecurityGroup",
+                        "GroupId"
+                    ]}
                 }],
                 "Tags" : [
                     {
@@ -479,31 +495,13 @@
             }
         },
         "EC2Instance" : {
-            "Type" : "AWS::EC2::Instance",
+            "Type" : "AWS::AutoScaling::LaunchConfiguration",
             "Properties" : {
                 "ImageId" : {"Ref" : "AMIID"},
                 "InstanceType" : {"Ref" : "ECInstanceType"},
-                "DisableApiTermination" : "false",
                 "KeyName" : {"Ref" : "KeyName"},
-                "BlockDeviceMappings" : [
-                    {
-                        "DeviceName" : "/dev/sda1",
-                        "Ebs" : {
-                            "DeleteOnTermination" : "true",
-                            "VolumeSize" : {"Ref" : "ECIVolumeSize"},
-                            "VolumeType" : "gp2"
-                        }
-                    }
-                ],
-                "IamInstanceProfile" : {"Ref" : "EC2IAMRoleInstanceProfile"},
-                "SecurityGroupIds" : [{"Ref" : "EC2SecurityGroup"}],
-                "SubnetId" : {"Ref" : "mySubnet1"},
-                "Tags" : [
-                    {
-                        "Key" : "Name",
-                        "Value" : "webapp-csye6225-spring2020-ec2"
-                    }
-                ],
+                "AssociatePublicIpAddress" : true,
+                "LaunchConfigurationName" : "asg_launch_config",
                 "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
                     "#!/bin/bash\n",
                     "echo DB_HOST=\"", { "Fn::GetAtt" : [ "RDSInstance", "Endpoint.Address" ] }, "\"", " >> /var/.env", "\n",
@@ -511,9 +509,11 @@
                     "echo DB_USER=\"", { "Ref" : "RDSMasterUser"}, "\"", " >> /var/.env", "\n",
                     "echo DB_PASSWORD=\"", { "Ref" : "RDSMasterPass"}, "\"", " >> /var/.env", "\n",
                     "echo S3_BUCKET=\"", { "Ref": "S3Bucket" }, "\"", " >> /var/.env", "\n"
-                ]]}}
+                ]]}},
+                "IamInstanceProfile" : {"Ref" : "EC2IAMRoleInstanceProfile"},
+                "SecurityGroups" : [{"Ref" : "EC2SecurityGroup"}]
             },
-            "DependsOn" : "RDSInstance"	
+            "DependsOn" : ["EC2SecurityGroup", "RDSInstance"]
         },
         "CodeDeployApplication" : {
             "Type" : "AWS::CodeDeploy::Application",
@@ -527,6 +527,7 @@
             "Properties" : {
                 "DeploymentGroupName" : "csye6225-webapp-deployment",
                 "ApplicationName" : {"Ref" : "CodeDeployApplication"},
+                "AutoScalingGroups" : [{"Ref" : "AutoScalingGroup"}],
                 "ServiceRoleArn" : {
                     "Fn::GetAtt": [
                         "CodeDeployServiceRole",
@@ -546,9 +547,165 @@
                 "AutoRollbackConfiguration": {
                     "Enabled": "true",
                     "Events": [ "DEPLOYMENT_FAILURE" ]
+                },
+                "LoadBalancerInfo": {
+                    "TargetGroupInfoList" : [{
+                        "Name" : {"Fn::GetAtt": ["TargetGroup", "TargetGroupName"]}
+                    }]
                 }
             },
             "DependsOn" : "EC2Instance"
+        },
+        "AutoScalingGroup" : {
+            "Type" : "AWS::AutoScaling::AutoScalingGroup",
+            "Properties" : {
+                "AutoScalingGroupName" : "AutoScalingGroup",
+                "Cooldown" : "60",
+                "LaunchConfigurationName" : {"Ref" : "EC2Instance"},
+                "MinSize" : "2",
+                "MaxSize" : "5",
+                "DesiredCapacity" : "2",
+                "TargetGroupARNs" : [{"Ref" : "TargetGroup"}],
+                "VPCZoneIdentifier" : [{"Ref" : "mySubnet1"}, {"Ref" : "mySubnet2"}],
+                "Tags" : [
+                    {
+                        "Key" : "Name",
+                        "Value" : "webapp-csye6225-spring2020-ec2",
+                        "PropagateAtLaunch" : true
+                    }
+                ]
+            },
+            "DependsOn" : ["EC2Instance"]
+        },
+        "WebServerScaleUpPolicy": {
+            "Type" : "AWS::AutoScaling::ScalingPolicy",
+            "Properties" : {
+                "AdjustmentType": "ChangeInCapacity",
+                "AutoScalingGroupName": {"Ref" : "AutoScalingGroup"},
+                "Cooldown": "60",
+                "ScalingAdjustment": 1
+            }
+        },
+        "WebServerScaleDownPolicy": {
+            "Type": "AWS::AutoScaling::ScalingPolicy",
+            "Properties": {
+                "AdjustmentType": "ChangeInCapacity",
+                "AutoScalingGroupName": {"Ref" : "AutoScalingGroup"},
+                "Cooldown": "60",
+                "ScalingAdjustment": -1
+            }
+        },
+        "CPUAlarmHigh": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmDescription": "Scale-up if CPU > 90% for 5 minutes",
+                "MetricName": "CPUUtilization",
+                "Namespace": "AWS/EC2",
+                "Statistic": "Average",
+                "Period": 300,
+                "EvaluationPeriods": 1,
+                "Threshold": 90,
+                "AlarmActions": [{"Ref" : "WebServerScaleUpPolicy"}],
+                "Dimensions": [{
+                    "Name" : "AutoScalingGroupName",
+                    "Value": {"Ref" : "AutoScalingGroup"}
+                }],
+                "ComparisonOperator": "GreaterThanThreshold"
+            }
+        },
+        "CPUAlarmLow": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmDescription": "Scale-down if CPU < 70% for 5 minutes",
+                "MetricName": "CPUUtilization",
+                "Namespace": "AWS/EC2",
+                "Statistic": "Average",
+                "Period": 300,
+                "EvaluationPeriods": 1,
+                "Threshold": 70,
+                "AlarmActions": [{"Ref" : "WebServerScaleDownPolicy"}],
+                "Dimensions": [{
+                    "Name" : "AutoScalingGroupName",
+                    "Value": {"Ref" : "AutoScalingGroup"}
+                }],
+                "ComparisonOperator": "LessThanThreshold"
+            }
+        },
+        "LoadBalancer" : {
+            "Type" : "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties" : {
+                "Name" : "LoadBalancer",
+                "Scheme" : "internet-facing",
+                "Type" : "application",
+                "SecurityGroups" : [{"Ref" : "LoadBalancerSecurityGroup"}],
+                "Subnets" : [{"Ref" : "mySubnet1"}, {"Ref" : "mySubnet2"}, {"Ref" : "mySubnet3"}]
+            }
+        },
+        "LoadBalancerListener" : {
+            "Type" : "AWS::ElasticLoadBalancingV2::Listener",
+            "Properties" : {
+                "DefaultActions" : [{
+                    "Type" : "forward",
+                    "TargetGroupArn" : {"Ref" : "TargetGroup"}
+                }],
+                "LoadBalancerArn" : {"Ref" : "LoadBalancer"},
+                "Port" : "3000",
+                "Protocol" : "HTTP"
+            }
+        },
+        "TargetGroup" : {
+            "Type" : "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties" : {
+                "HealthCheckIntervalSeconds" : 10,
+                "HealthCheckTimeoutSeconds": 5,
+                "HealthyThresholdCount": 2,
+                "HealthCheckPath": "/",
+                "Name": "TargetGroup",
+                "Port": 3000,
+                "Protocol": "HTTP",
+                "UnhealthyThresholdCount": 2,
+                "VpcId" : { "Ref" : "myVPC"}
+            },
+            "DependsOn": ["LoadBalancer"]
+        },
+        "LoadBalancerSecurityGroup" : {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupName": "LoadBalancerSecurityGroup",
+                "GroupDescription": "Group for Load Balancer",
+                "VpcId" : {"Ref" : "myVPC"},
+                "SecurityGroupIngress" : [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : 80,
+                        "ToPort" : 80,
+                        "CidrIp" : "0.0.0.0/0"
+                    },{
+                        "IpProtocol" : "tcp",
+                        "FromPort" : 443,
+                        "ToPort" : 443,
+                        "CidrIp" : "0.0.0.0/0" 
+                    },
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : 3000,
+                        "ToPort" : 3000,
+                        "CidrIp" : "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "myDNS" : {
+            "Type" : "AWS::Route53::RecordSet",
+            "Properties" : {
+                "AliasTarget" : {
+                    "HostedZoneId" : { "Fn::GetAtt" : ["LoadBalancer", "CanonicalHostedZoneID"] },
+                    "DNSName" : { "Fn::GetAtt" : ["LoadBalancer","DNSName"] }
+                },
+                "Name" : "dev.vishakavarma.com.",
+                "HostedZoneName" : "dev.vishakavarma.com.",
+                "Type" : "A"
+            }
         }
     }
 }
