@@ -21,7 +21,8 @@
         "ECInstanceType" : { "Type": "String"},
         "RDSDBName" : { "Type": "String"},
         "ECIVolumeSize" : { "Type": "String"},
-        "CodeDeployS3Bucket" : { "Type": "String"}
+        "CodeDeployS3Bucket" : { "Type": "String"},
+        "HostName" : { "Type": "String"}
     },
     "Resources" : {
         "myVPC" : {
@@ -702,8 +703,8 @@
                     "HostedZoneId" : { "Fn::GetAtt" : ["LoadBalancer", "CanonicalHostedZoneID"] },
                     "DNSName" : { "Fn::GetAtt" : ["LoadBalancer","DNSName"] }
                 },
-                "Name" : "dev.vishakavarma.com.",
-                "HostedZoneName" : "dev.vishakavarma.com.",
+                "Name" : {"Ref" : "HostName"},
+                "HostedZoneName" : {"Ref" : "HostName"},
                 "Type" : "A"
             }
         }
