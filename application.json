@@ -605,7 +605,7 @@
                 "Statistic": "Average",
                 "Period": 300,
                 "EvaluationPeriods": 1,
-                "Threshold": 70,
+                "Threshold": 80,
                 "AlarmActions": [{"Ref" : "WebServerScaleUpPolicy"}],
                 "Dimensions": [{
                     "Name" : "AutoScalingGroupName",
