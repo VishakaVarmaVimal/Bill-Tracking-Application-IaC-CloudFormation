@@ -1,0 +1,52 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description" : "AWS CloudFormation - Spring 2020",
+    "Resources" : {
+        "SQSRole" : {
+            "Type" : "AWS::SQS::QueuePolicy",
+            "Properties" : {
+                "PolicyDocument" : {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": "*",
+                        "Action": "SQS:SendMessage",
+                        "Resource": {
+                            "Fn::GetAtt": [
+                                "MySQSQueue",
+                                "Arn"
+                            ]
+                        },
+                        "Condition": {
+                            "StringEquals" : {
+                                "aws:SourceArn": {"Ref" : "MySNS"}
+                            }
+                        }
+                    }]
+                },
+                "Queues" : [{"Ref" : "MySQSQueue"}]
+            }
+        },
+        "MySQSQueue" : {
+            "Type" : "AWS::SQS::Queue",
+            "Properties" : {
+                "QueueName" : "MyQueue"
+            }
+        },
+        "MySNS" : {
+            "Type" : "AWS::SNS::Topic",
+            "Properties" : {
+                "TopicName" : "SNSCheck",
+                "Subscription" : [{
+                    "Endpoint" : {
+                        "Fn::GetAtt": [
+                            "MySQSQueue",
+                            "Arn"
+                        ]
+                    },
+                    "Protocol" : "sqs"
+                }]
+            }
+        }
+    }  
+}
