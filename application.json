@@ -22,7 +22,11 @@
         "RDSDBName" : { "Type": "String"},
         "ECIVolumeSize" : { "Type": "String"},
         "CodeDeployS3Bucket" : { "Type": "String"},
-        "HostName" : { "Type": "String"}
+        "LambdaS3Bucket" : { "Type": "String"},
+        "HostName" : { "Type": "String"},
+        "DynamoDBTableName" : { "Type": "String"},
+        "DevelopmentType" : { "Type": "String"},
+        "SQSRegion" : { "Type": "String"}
     },
     "Resources" : {
         "myVPC" : {
@@ -334,7 +338,13 @@
         "CodeDeployEC2ServiceRole" : {
             "Type" : "AWS::IAM::Role",
             "Properties" : {
-                "ManagedPolicyArns": ["arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"],
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",
+                    "arn:aws:iam::aws:policy/AmazonSNSFullAccess",
+                    "arn:aws:iam::aws:policy/service-role/AmazonSNSRole",
+                    "arn:aws:iam::aws:policy/AmazonSESFullAccess",
+                    "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
+                ],
                 "AssumeRolePolicyDocument": {
                     "Version": "2012-10-17",
                     "Statement": [
@@ -509,7 +519,11 @@
                     "echo DB_PORT=\"", { "Fn::GetAtt" : [ "RDSInstance", "Endpoint.Port" ] }, "\"", " >> /var/.env", "\n",
                     "echo DB_USER=\"", { "Ref" : "RDSMasterUser"}, "\"", " >> /var/.env", "\n",
                     "echo DB_PASSWORD=\"", { "Ref" : "RDSMasterPass"}, "\"", " >> /var/.env", "\n",
-                    "echo S3_BUCKET=\"", { "Ref": "S3Bucket" }, "\"", " >> /var/.env", "\n"
+                    "echo S3_BUCKET=\"", { "Ref": "S3Bucket" }, "\"", " >> /var/.env", "\n",
+                    "echo DEVELOPMENT_TYPE=\"", { "Ref": "DevelopmentType" }, "\"", " >> /var/.env", "\n",
+                    "echo SQS_URL=\"", {"Ref" : "MySQSQueue"}, "\"", " >> /var/.env", "\n",
+                    "echo SNS_ARN=\"", {"Ref" : "MySNS"}, "\"", " >> /var/.env", "\n",
+                    "echo SQS_REGION=\"", {"Ref" : "SQSRegion"}, "\"", " >> /var/.env", "\n"
                 ]]}},
                 "IamInstanceProfile" : {"Ref" : "EC2IAMRoleInstanceProfile"},
                 "SecurityGroups" : [{"Ref" : "EC2SecurityGroup"}]
@@ -706,6 +720,124 @@
                 "Name" : {"Ref" : "HostName"},
                 "HostedZoneName" : {"Ref" : "HostName"},
                 "Type" : "A"
+            }
+        },
+        "MySQSQueue" : {
+            "Type" : "AWS::SQS::Queue",
+            "Properties" : {
+                "QueueName" : "MyQueue"
+            }
+        },
+        "MySQSQueuePolicy" : {
+            "Type" : "AWS::SQS::QueuePolicy",
+            "Properties" : {
+                "PolicyDocument" : {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": "*",
+                            "Action": "SQS:*",
+                            "Resource": {"Fn::GetAtt": ["MySQSQueue", "Arn"]},
+                            "Condition": {
+                                "StringEquals": {"aws:SourceArn": {"Ref" : "MySNS"}}
+                            }
+                        }
+                    ]
+                },
+                "Queues" : [{"Ref" : "MySQSQueue"}]
+            }
+        },
+        "MySNS" : {
+            "Type" : "AWS::SNS::Topic",
+            "Properties" : {
+                "TopicName" : "MySNS",
+                "Subscription" : [{
+                    "Endpoint" : {"Fn::GetAtt": ["MyLambdaFunction", "Arn"]},
+                    "Protocol" : "lambda"
+                }]
+            },
+            "DependsOn": ["MyLambdaFunction"]
+        },
+        "MyLambdaFunction" : {
+            "Type" : "AWS::Lambda::Function",
+            "Properties" : {
+                "Code" : {
+                    "S3Bucket" : {"Ref" : "LambdaS3Bucket"},
+                    "S3Key" : "lambda.zip"
+                },
+                "Description" : "Lambda Function to Notify Users of Due Bills",
+                "Environment": {
+                    "Variables" : {
+                        "DYNAMODB_TABLE" : {"Ref" : "DynamoDBTableName"}
+                    }
+                },
+                "FunctionName" : "MyLambdaFunction",
+                "Handler" : "index.handler",
+                "MemorySize": 512,
+                "Role" : {"Fn::GetAtt": ["MyLambdaRole", "Arn"]},
+                "Runtime" : "nodejs12.x"
+            }
+        },
+        "MyLambdaResourcePolicy" : {
+            "Type" : "AWS::Lambda::Permission",
+            "Properties" : {
+                "Action" : "lambda:InvokeFunction",
+                "FunctionName" : {"Ref" : "MyLambdaFunction"},
+                "Principal" : "sns.amazonaws.com",
+                "SourceArn" : {"Ref" : "MySNS"}
+            }
+        },
+        "MyLambdaRole" : {
+            "Type" : "AWS::IAM::Role",
+            "Properties" : {
+                "AssumeRolePolicyDocument" : {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "ManagedPolicyArns" : [
+                    "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess",
+                    "arn:aws:iam::aws:policy/AmazonSESFullAccess",
+                    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+                    "arn:aws:iam::aws:policy/AmazonS3FullAccess",
+                    "arn:aws:iam::aws:policy/service-role/AWSLambdaDynamoDBExecutionRole",
+                    "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+                ],
+                "RoleName" : "MyLambdaRole"
+            }
+        },
+        "MyDynamoDBTable" : {
+            "Type" : "AWS::DynamoDB::Table",
+            "Properties" : {
+                "AttributeDefinitions" : [{
+                    "AttributeName" : "userID",
+                    "AttributeType" : "S"
+                }],
+                "KeySchema" : [{
+                    "AttributeName" : "userID",
+                    "KeyType" : "HASH"
+                }],
+                "ProvisionedThroughput" : {
+                    "ReadCapacityUnits" : 1,
+                    "WriteCapacityUnits" : 1
+                },
+                "TableName" : {"Ref" : "DynamoDBTableName"},
+                "TimeToLiveSpecification" : {
+                    "AttributeName" : "time_to_live",
+                    "Enabled" : true
+                }
             }
         }
     }
