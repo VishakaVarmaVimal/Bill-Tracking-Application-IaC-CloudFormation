@@ -22,8 +22,9 @@
         "RDSDBName" : { "Type": "String"},
         "ECIVolumeSize" : { "Type": "String"},
         "CodeDeployS3Bucket" : { "Type": "String"},
-        "Lambda_S3_Bucket" : { "Type": "String"},
-        "HostName" : { "Type": "String"}
+        "LambdaS3Bucket" : { "Type": "String"},
+        "HostName" : { "Type": "String"},
+        "DynamoDBTableName" : { "Type": "String"}
     },
     "Resources" : {
         "myVPC" : {
@@ -750,10 +751,15 @@
             "Type" : "AWS::Lambda::Function",
             "Properties" : {
                 "Code" : {
-                    "S3Bucket" : {"Ref" : "Lambda_S3_Bucket"},
+                    "S3Bucket" : {"Ref" : "LambdaS3Bucket"},
                     "S3Key" : "lambda.zip"
                 },
                 "Description" : "Lambda Function to Notify Users of Due Bills",
+                "Environment": {
+                    "Variables" : {
+                        "DYNAMODB_TABLE" : {"Ref" : "DynamoDBTableName"}
+                    }
+                },
                 "FunctionName" : "MyLambdaFunction",
                 "Handler" : "index.handler",
                 "MemorySize": 512,
@@ -798,6 +804,28 @@
                     "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
                 ],
                 "RoleName" : "MyLambdaRole"
+            }
+        },
+        "MyDynamoDBTable" : {
+            "Type" : "AWS::DynamoDB::Table",
+            "Properties" : {
+                "AttributeDefinitions" : [{
+                    "AttributeName" : "userID",
+                    "AttributeType" : "S"
+                }],
+                "KeySchema" : [{
+                    "AttributeName" : "userID",
+                    "KeyType" : "HASH"
+                }],
+                "ProvisionedThroughput" : {
+                    "ReadCapacityUnits" : 1,
+                    "WriteCapacityUnits" : 1
+                },
+                "TableName" : {"Ref" : "DynamoDBTableName"},
+                "TimeToLiveSpecification" : {
+                    "AttributeName" : "time_to_live",
+                    "Enabled" : true
+                }
             }
         }
     }

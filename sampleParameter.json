@@ -1,0 +1,10 @@
+[
+    {
+        "ParameterKey": "LambdaS3Bucket",
+        "ParameterValue": "vishaka-serverless-lambda-function"
+    },
+    {
+        "ParameterKey": "DynamoDBTableName",
+        "ParameterValue": "MyDynamoDBTable"
+    }
+]
