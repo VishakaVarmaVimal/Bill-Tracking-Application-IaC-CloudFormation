@@ -769,7 +769,8 @@
                 "Description" : "Lambda Function to Notify Users of Due Bills",
                 "Environment": {
                     "Variables" : {
-                        "DYNAMODB_TABLE" : {"Ref" : "DynamoDBTableName"}
+                        "DYNAMODB_TABLE" : {"Ref" : "DynamoDBTableName"},
+                        "DEVELOPMENT_TYPE" : {"Ref" : "DevelopmentType"}
                     }
                 },
                 "FunctionName" : "MyLambdaFunction",
