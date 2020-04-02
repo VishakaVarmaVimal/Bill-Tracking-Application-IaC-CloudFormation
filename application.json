@@ -24,7 +24,9 @@
         "CodeDeployS3Bucket" : { "Type": "String"},
         "LambdaS3Bucket" : { "Type": "String"},
         "HostName" : { "Type": "String"},
-        "DynamoDBTableName" : { "Type": "String"}
+        "DynamoDBTableName" : { "Type": "String"},
+        "DevelopmentType" : { "Type": "String"},
+        "SQSRegion" : { "Type": "String"}
     },
     "Resources" : {
         "myVPC" : {
@@ -336,7 +338,13 @@
         "CodeDeployEC2ServiceRole" : {
             "Type" : "AWS::IAM::Role",
             "Properties" : {
-                "ManagedPolicyArns": ["arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"],
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",
+                    "arn:aws:iam::aws:policy/AmazonSNSFullAccess",
+                    "arn:aws:iam::aws:policy/service-role/AmazonSNSRole",
+                    "arn:aws:iam::aws:policy/AmazonSESFullAccess",
+                    "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
+                ],
                 "AssumeRolePolicyDocument": {
                     "Version": "2012-10-17",
                     "Statement": [
@@ -511,7 +519,11 @@
                     "echo DB_PORT=\"", { "Fn::GetAtt" : [ "RDSInstance", "Endpoint.Port" ] }, "\"", " >> /var/.env", "\n",
                     "echo DB_USER=\"", { "Ref" : "RDSMasterUser"}, "\"", " >> /var/.env", "\n",
                     "echo DB_PASSWORD=\"", { "Ref" : "RDSMasterPass"}, "\"", " >> /var/.env", "\n",
-                    "echo S3_BUCKET=\"", { "Ref": "S3Bucket" }, "\"", " >> /var/.env", "\n"
+                    "echo S3_BUCKET=\"", { "Ref": "S3Bucket" }, "\"", " >> /var/.env", "\n",
+                    "echo DEVELOPMENT_TYPE=\"", { "Ref": "DevelopmentType" }, "\"", " >> /var/.env", "\n",
+                    "echo SQS_URL=\"", {"Ref" : "MySQSQueue"}, "\"", " >> /var/.env", "\n",
+                    "echo SNS_ARN=\"", {"Ref" : "MySNS"}, "\"", " >> /var/.env", "\n",
+                    "echo SQS_REGION=\"", {"Ref" : "SQSRegion"}, "\"", " >> /var/.env", "\n"
                 ]]}},
                 "IamInstanceProfile" : {"Ref" : "EC2IAMRoleInstanceProfile"},
                 "SecurityGroups" : [{"Ref" : "EC2SecurityGroup"}]
