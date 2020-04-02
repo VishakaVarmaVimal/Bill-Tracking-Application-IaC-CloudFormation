@@ -757,7 +757,7 @@
                 "FunctionName" : "MyLambdaFunction",
                 "Handler" : "index.handler",
                 "MemorySize": 512,
-                "Role" : "",
+                "Role" : {"Fn::GetAtt": ["MyLambdaRole", "Arn"]},
                 "Runtime" : "nodejs12.x"
             }
         },
@@ -769,7 +769,37 @@
                 "Principal" : "sns.amazonaws.com",
                 "SourceArn" : {"Ref" : "MySNS"}
             }
-        }  
+        },
+        "MyLambdaRole" : {
+            "Type" : "AWS::IAM::Role",
+            "Properties" : {
+                "AssumeRolePolicyDocument" : {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "ManagedPolicyArns" : [
+                    "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess",
+                    "arn:aws:iam::aws:policy/AmazonSESFullAccess",
+                    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+                    "arn:aws:iam::aws:policy/AmazonS3FullAccess",
+                    "arn:aws:iam::aws:policy/service-role/AWSLambdaDynamoDBExecutionRole",
+                    "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+                ],
+                "RoleName" : "MyLambdaRole"
+            }
+        }
     }
 }
 
