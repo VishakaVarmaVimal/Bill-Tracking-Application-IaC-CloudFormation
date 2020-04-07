@@ -661,13 +661,16 @@
         "LoadBalancerListener" : {
             "Type" : "AWS::ElasticLoadBalancingV2::Listener",
             "Properties" : {
+                "Certificates" : [{
+                    "CertificateArn" : {"Ref" : "CertificateARN"}
+                }],
                 "DefaultActions" : [{
                     "Type" : "forward",
                     "TargetGroupArn" : {"Ref" : "TargetGroup"}
                 }],
                 "LoadBalancerArn" : {"Ref" : "LoadBalancer"},
                 "Port" : "3000",
-                "Protocol" : "HTTP"
+                "Protocol" : "HTTPS"
             }
         },
         "TargetGroup" : {
