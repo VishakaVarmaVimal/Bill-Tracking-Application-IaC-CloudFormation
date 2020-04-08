@@ -26,7 +26,8 @@
         "HostName" : { "Type": "String"},
         "DynamoDBTableName" : { "Type": "String"},
         "DevelopmentType" : { "Type": "String"},
-        "SQSRegion" : { "Type": "String"}
+        "SQSRegion" : { "Type": "String"},
+        "CertificateARN" : { "Type": "String"}
     },
     "Resources" : {
         "myVPC" : {
@@ -479,6 +480,7 @@
             "Properties" : {
                 "Engine" : "MySQL",
                 "DBInstanceClass" : {"Ref" : "RDSInstanceClass"},
+                "DBParameterGroupName" : {"Ref" : "MyDBParameterGroup"},
                 "MultiAZ" : "false",
                 "DBInstanceIdentifier" : {"Ref" : "RDSInstanceId"},
                 "MasterUsername" : {"Ref" : "RDSMasterUser"},
@@ -491,12 +493,23 @@
                 "AllocatedStorage" : {"Ref" : "RDSAllocatedStorage"},
                 "StorageType" : "gp2",
                 "DBSubnetGroupName" : {"Ref" : "RDSSubnetGroup"},
+                "StorageEncrypted" : true,
                 "Tags" : [
                     {
                         "Key" : "Name",
                         "Value" : "webapp-csye6225-spring2020-rds"
                     }
                 ]
+            }
+        },
+        "MyDBParameterGroup" : {
+            "Type" : "AWS::RDS::DBParameterGroup",
+            "Properties" : {
+                "Description" : "Enable performance schema",
+                "Family" : "mysql5.7",
+                "Parameters" : {
+                    "performance_schema" : 1
+                }
             }
         },
         "EC2IAMRoleInstanceProfile" : {
@@ -659,13 +672,16 @@
         "LoadBalancerListener" : {
             "Type" : "AWS::ElasticLoadBalancingV2::Listener",
             "Properties" : {
+                "Certificates" : [{
+                    "CertificateArn" : {"Ref" : "CertificateARN"}
+                }],
                 "DefaultActions" : [{
                     "Type" : "forward",
                     "TargetGroupArn" : {"Ref" : "TargetGroup"}
                 }],
                 "LoadBalancerArn" : {"Ref" : "LoadBalancer"},
                 "Port" : "3000",
-                "Protocol" : "HTTP"
+                "Protocol" : "HTTPS"
             }
         },
         "TargetGroup" : {
