@@ -480,6 +480,7 @@
             "Properties" : {
                 "Engine" : "MySQL",
                 "DBInstanceClass" : {"Ref" : "RDSInstanceClass"},
+                "DBParameterGroupName" : {"Ref" : "MyDBParameterGroup"},
                 "MultiAZ" : "false",
                 "DBInstanceIdentifier" : {"Ref" : "RDSInstanceId"},
                 "MasterUsername" : {"Ref" : "RDSMasterUser"},
@@ -499,6 +500,16 @@
                         "Value" : "webapp-csye6225-spring2020-rds"
                     }
                 ]
+            }
+        },
+        "MyDBParameterGroup" : {
+            "Type" : "AWS::RDS::DBParameterGroup",
+            "Properties" : {
+                "Description" : "Enable performance schema",
+                "Family" : "mysql5.7",
+                "Parameters" : {
+                    "performance_schema" : 1
+                }
             }
         },
         "EC2IAMRoleInstanceProfile" : {
