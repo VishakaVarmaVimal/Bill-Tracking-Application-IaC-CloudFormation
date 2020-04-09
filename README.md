@@ -43,6 +43,7 @@ aws cloudformation create-stack \
 
 ```aws cloudformation delete-stack --stack-name <Stack_Name>```
 
+
 ## Setup SSL Certificate
 
 The following commands show how to import an SSL certificate to your AWS certificate manager from CLI.
@@ -59,8 +60,13 @@ When the certificate is purchased from a third party app (and not from AWS), use
 
 3. Once the csr and private keys are generated, activate your SSL certificate from your provider using the csr. A file with certificate key and certificate bundle will be provided to you. Upload the certificate to your AWS using the following command -
 
-   
-  	```$ aws acm import-certificate --certificate fileb://Certificate.pem                --certificate-chain fileb://CertificateChain.pem --private-key fileb://PrivateKey.pem --profile <profile_name> --region <region>```
+   ```
+  	$ aws acm import-certificate --certificate fileb://Certificate.pem \           
+                                --certificate-chain fileb://CertificateChain.pem \
+                                --private-key fileb://PrivateKey.pem \
+                                --profile <profile_name> \
+                                --region <region>```
+   ```
 
 
 ## References 
@@ -79,3 +85,5 @@ https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-
 https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-internetgateway.html
 https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
 https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc-gateway-attachment.html
+https://docs.aws.amazon.com/acm/latest/userguide/import-certificate-api-cli.html
+https://www.namecheap.com/support/knowledgebase/article.aspx/9592/14/generating-a-csr-on-amazon-web-services-aws/
