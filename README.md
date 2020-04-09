@@ -66,7 +66,7 @@ When the certificate is purchased from a third party app (and not from AWS), use
                                 --certificate-chain fileb://CertificateChain.pem \
                                 --private-key fileb://PrivateKey.pem \
                                 --profile <profile_name> \
-                                --region <region>`
+                                --region <region>
    ```
 
 
