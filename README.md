@@ -1,6 +1,6 @@
 # Infrastructure
 
-## This repository contains template for AWS CloudFormation.
+## This repository contains template for AWS CloudFormation and commands to import an SSL certificate.
 ### Template for setting up network -
 
 1. Install AWS CLI as the first step for this template. 
@@ -43,6 +43,24 @@ aws cloudformation create-stack \
 
 ```aws cloudformation delete-stack --stack-name <Stack_Name>```
 
+## Setup SSL Certificate
+
+The following commands show how to import an SSL certificate to your AWS certificate manager from CLI.
+
+When the certificate is purchased from a third party app (and not from AWS), use the following steps -
+
+### Generate private key and CSR using OpenSSL
+
+1. Check if your system has OpenSSL installed by typing ```openssl``` in your terminal. If it is not      installed, you must install it.
+2. Enter the commands :
+
+   ```openssl genrsa 2048 > private-key.pem``
+   ```openssl req -new -key private-key.pem -out csr.pem```
+
+3. Once the csr and private keys are generated, activate your SSL certificate from your provider using the csr. A file with certificate key and certificate bundle will be provided to you. Upload the certificate to your AWS using the following command -
+
+   
+  	```$ aws acm import-certificate --certificate fileb://Certificate.pem                --certificate-chain fileb://CertificateChain.pem --private-key fileb://PrivateKey.pem --profile <profile_name> --region <region>```
 
 
 ## References 
