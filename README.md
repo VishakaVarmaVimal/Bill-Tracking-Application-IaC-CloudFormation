@@ -56,7 +56,7 @@ When the certificate is purchased from a third party app (and not from AWS), use
 2. Enter the commands :
 
    ```openssl genrsa 2048 > private-key.pem```
-   
+
    ```openssl req -new -key private-key.pem -out csr.pem```
 
 3. Once the csr and private keys are generated, activate your SSL certificate from your provider using the csr. A file with certificate key and certificate bundle will be provided to you. Upload the certificate to your AWS using the following command -
@@ -66,7 +66,7 @@ When the certificate is purchased from a third party app (and not from AWS), use
                                 --certificate-chain fileb://CertificateChain.pem \
                                 --private-key fileb://PrivateKey.pem \
                                 --profile <profile_name> \
-                                --region <region>```
+                                --region <region>
    ```
 
 
